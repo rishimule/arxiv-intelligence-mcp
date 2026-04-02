@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArXiv Intelligence MCP</title>
+    <meta name="description" content="An intelligent research assistant powered by MCP, ArXiv, and ChromaDB. Search, read, and reason over scientific papers with AI.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: rgba(255, 255, 255, 0.03);
+            --bg-card-hover: rgba(255, 255, 255, 0.06);
+            --border: rgba(255, 255, 255, 0.06);
+            --border-hover: rgba(255, 255, 255, 0.12);
+            --text-primary: #e8e8ed;
+            --text-secondary: #8b8b9e;
+            --text-tertiary: #5a5a6e;
+            --accent: #6366f1;
+            --accent-light: #818cf8;
+            --accent-glow: rgba(99, 102, 241, 0.15);
+            --green: #34d399;
+            --amber: #fbbf24;
+            --rose: #fb7185;
+            --cyan: #22d3ee;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Subtle background grid */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(rgba(99, 102, 241, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(99, 102, 241, 0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Gradient orbs */
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .orb-1 {
+            width: 600px;
+            height: 600px;
+            background: rgba(99, 102, 241, 0.08);
+            top: -200px;
+            right: -200px;
+            animation: float 20s ease-in-out infinite;
+        }
+
+        .orb-2 {
+            width: 500px;
+            height: 500px;
+            background: rgba(34, 211, 238, 0.05);
+            bottom: -150px;
+            left: -150px;
+            animation: float 25s ease-in-out infinite reverse;
+        }
+
+        .orb-3 {
+            width: 400px;
+            height: 400px;
+            background: rgba(251, 113, 133, 0.04);
+            top: 50%;
+            left: 50%;
+            animation: float 30s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0); }
+            25% { transform: translate(30px, -30px); }
+            50% { transform: translate(-20px, 20px); }
+            75% { transform: translate(20px, 10px); }
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 24px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            padding: 16px 0;
+            transition: all 0.3s ease;
+        }
+
+        nav.scrolled {
+            background: rgba(10, 10, 15, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+        }
+
+        nav .container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+
+        .nav-logo svg {
+            width: 28px;
+            height: 28px;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--text-primary);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-light);
+            box-shadow: 0 0 30px rgba(99, 102, 241, 0.25);
+            transform: translateY(-1px);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-ghost:hover {
+            border-color: var(--border-hover);
+            color: var(--text-primary);
+            background: var(--bg-card);
+        }
+
+        /* Hero */
+        .hero {
+            padding: 160px 0 100px;
+            text-align: center;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+        }
+
+        .hero-badge .dot {
+            width: 6px;
+            height: 6px;
+            background: var(--green);
+            border-radius: 50%;
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 6vw, 4.5rem);
+            font-weight: 800;
+            line-height: 1.1;
+            letter-spacing: -0.03em;
+            margin-bottom: 24px;
+        }
+
+        .hero h1 .gradient {
+            background: linear-gradient(135deg, var(--accent-light), var(--cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 1.15rem;
+            color: var(--text-secondary);
+            max-width: 580px;
+            margin: 0 auto 40px;
+            line-height: 1.7;
+        }
+
+        .hero-actions {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        /* Install command */
+        .install-cmd {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 20px;
+            margin-top: 48px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .install-cmd:hover {
+            border-color: var(--border-hover);
+            background: var(--bg-card-hover);
+        }
+
+        .install-cmd code {
+            color: var(--text-primary);
+        }
+
+        .install-cmd .copy-icon {
+            color: var(--text-tertiary);
+            transition: color 0.2s;
+        }
+
+        .install-cmd:hover .copy-icon {
+            color: var(--text-secondary);
+        }
+
+        /* Section styling */
+        section {
+            padding: 100px 0;
+        }
+
+        .section-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--accent-light);
+            margin-bottom: 16px;
+        }
+
+        .section-title {
+            font-size: clamp(1.75rem, 4vw, 2.5rem);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 16px;
+        }
+
+        .section-desc {
+            color: var(--text-secondary);
+            font-size: 1.05rem;
+            max-width: 560px;
+            margin-bottom: 56px;
+        }
+
+        /* Feature cards */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 32px;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--border-hover);
+            transform: translateY(-2px);
+        }
+
+        .feature-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            font-size: 1.25rem;
+        }
+
+        .feature-icon.purple { background: rgba(99, 102, 241, 0.1); color: var(--accent-light); }
+        .feature-icon.green { background: rgba(52, 211, 153, 0.1); color: var(--green); }
+        .feature-icon.amber { background: rgba(251, 191, 36, 0.1); color: var(--amber); }
+        .feature-icon.rose { background: rgba(251, 113, 133, 0.1); color: var(--rose); }
+
+        .feature-card h3 {
+            font-size: 1.05rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .feature-card p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        /* Architecture */
+        .arch-diagram {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 48px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .arch-diagram::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+        }
+
+        .arch-flow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .arch-node {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 28px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .arch-node.primary {
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            color: var(--accent-light);
+        }
+
+        .arch-node.server {
+            background: rgba(34, 211, 238, 0.08);
+            border: 1px solid rgba(34, 211, 238, 0.15);
+            color: var(--cyan);
+            padding: 20px 36px;
+            font-size: 1rem;
+        }
+
+        .arch-connector {
+            width: 1px;
+            height: 32px;
+            background: linear-gradient(to bottom, var(--accent), var(--cyan));
+            position: relative;
+        }
+
+        .arch-connector::after {
+            content: '';
+            position: absolute;
+            bottom: -3px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 7px;
+            height: 7px;
+            background: var(--cyan);
+            border-radius: 50%;
+        }
+
+        .arch-services {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .arch-service {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 22px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .arch-service-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .arch-service-dot.s1 { background: var(--accent-light); }
+        .arch-service-dot.s2 { background: var(--green); }
+        .arch-service-dot.s3 { background: var(--amber); }
+
+        .arch-branch {
+            display: flex;
+            gap: 12px;
+            position: relative;
+        }
+
+        .arch-branch::before {
+            content: '';
+            position: absolute;
+            top: -24px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(34, 211, 238, 0.3), transparent);
+        }
+
+        /* MCP Tools table */
+        .tools-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 8px;
+        }
+
+        .tools-table th {
+            text-align: left;
+            padding: 12px 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-tertiary);
+        }
+
+        .tools-table td {
+            padding: 16px 20px;
+            font-size: 0.9rem;
+            background: var(--bg-card);
+        }
+
+        .tools-table tr td:first-child {
+            border-radius: 12px 0 0 12px;
+            border-left: 1px solid var(--border);
+        }
+
+        .tools-table tr td:last-child {
+            border-radius: 0 12px 12px 0;
+            border-right: 1px solid var(--border);
+        }
+
+        .tools-table td {
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tools-table tr:hover td {
+            background: var(--bg-card-hover);
+        }
+
+        .tool-type {
+            display: inline-flex;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .tool-type.tool { background: rgba(99, 102, 241, 0.1); color: var(--accent-light); }
+        .tool-type.resource { background: rgba(34, 211, 238, 0.1); color: var(--cyan); }
+
+        .tool-name {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .tool-desc {
+            color: var(--text-secondary);
+        }
+
+        /* Workflow */
+        .workflow-steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+        }
+
+        .workflow-step {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 28px;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .workflow-step:hover {
+            border-color: var(--border-hover);
+            transform: translateY(-2px);
+        }
+
+        .step-number {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--accent-light);
+            font-weight: 700;
+            font-size: 0.85rem;
+            margin-bottom: 16px;
+        }
+
+        .workflow-step h4 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .workflow-step p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            line-height: 1.6;
+        }
+
+        /* Code block */
+        .code-block {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .code-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 20px;
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .code-dots {
+            display: flex;
+            gap: 6px;
+        }
+
+        .code-dots span {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--border);
+        }
+
+        .code-lang {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .code-block pre {
+            padding: 24px;
+            overflow-x: auto;
+        }
+
+        .code-block code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.7;
+            color: var(--text-secondary);
+        }
+
+        .code-block code .comment { color: var(--text-tertiary); }
+        .code-block code .keyword { color: var(--accent-light); }
+        .code-block code .string { color: var(--green); }
+        .code-block code .variable { color: var(--cyan); }
+
+        /* Tech stack */
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .tech-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            transition: all 0.2s;
+        }
+
+        .tech-item:hover {
+            border-color: var(--border-hover);
+            background: var(--bg-card-hover);
+        }
+
+        .tech-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .tech-item .tech-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .tech-item .tech-role {
+            font-size: 0.78rem;
+            color: var(--text-tertiary);
+            margin-top: 2px;
+        }
+
+        /* Footer */
+        footer {
+            padding: 48px 0;
+            border-top: 1px solid var(--border);
+        }
+
+        .footer-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .footer-left {
+            color: var(--text-tertiary);
+            font-size: 0.85rem;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 24px;
+        }
+
+        .footer-links a {
+            color: var(--text-tertiary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: color 0.2s;
+        }
+
+        .footer-links a:hover {
+            color: var(--text-secondary);
+        }
+
+        /* Animations */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-links { display: none; }
+            .hero { padding: 120px 0 60px; }
+            section { padding: 60px 0; }
+            .arch-diagram { padding: 24px; }
+            .arch-services { flex-direction: column; align-items: center; }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-tertiary);
+        }
+    </style>
+</head>
+<body>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <!-- Navigation -->
+    <nav id="navbar">
+        <div class="container">
+            <a href="#" class="nav-logo">
+                <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="28" height="28" rx="8" fill="url(#logo-grad)"/>
+                    <path d="M8 14L12 10L16 14L20 10" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M8 18L12 14L16 18L20 14" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+                    <defs>
+                        <linearGradient id="logo-grad" x1="0" y1="0" x2="28" y2="28">
+                            <stop stop-color="#6366f1"/>
+                            <stop offset="1" stop-color="#22d3ee"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+                ArXiv Intelligence
+            </a>
+            <ul class="nav-links">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#architecture">Architecture</a></li>
+                <li><a href="#tools">MCP Tools</a></li>
+                <li><a href="#quickstart">Quick Start</a></li>
+                <li><a href="https://github.com/rishimule/arxiv-intelligence-mcp" class="btn btn-ghost" target="_blank">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+                    GitHub
+                </a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-badge fade-in">
+                <span class="dot"></span>
+                Open Source &middot; Model Context Protocol
+            </div>
+            <h1 class="fade-in">
+                Your AI Research<br><span class="gradient">Assistant for ArXiv</span>
+            </h1>
+            <p class="fade-in">
+                Search, read, and reason over scientific papers. Powered by MCP, ChromaDB, and local embeddings &mdash; no API keys required.
+            </p>
+            <div class="hero-actions fade-in">
+                <a href="#quickstart" class="btn btn-primary">
+                    Get Started
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+                </a>
+                <a href="https://github.com/rishimule/arxiv-intelligence-mcp" class="btn btn-ghost" target="_blank">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+                    Star on GitHub
+                </a>
+            </div>
+            <div class="install-cmd fade-in" onclick="copyInstall(this)" title="Click to copy">
+                <span>$</span>
+                <code>git clone https://github.com/rishimule/arxiv-intelligence-mcp.git && cd arxiv-intelligence-mcp && uv sync</code>
+                <svg class="copy-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="5" y="5" width="9" height="9" rx="2"/><path d="M5 11H3.5A1.5 1.5 0 012 9.5v-6A1.5 1.5 0 013.5 2h6A1.5 1.5 0 0111 3.5V5"/></svg>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section id="features">
+        <div class="container">
+            <div class="section-label fade-in">Features</div>
+            <h2 class="section-title fade-in">Everything you need for<br>AI-powered research</h2>
+            <p class="section-desc fade-in">Connect to Claude Desktop or Cursor and start exploring the scientific literature with natural language.</p>
+
+            <div class="features-grid">
+                <div class="feature-card fade-in">
+                    <div class="feature-icon purple">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                    </div>
+                    <h3>Smart Search</h3>
+                    <p>Query ArXiv's entire database with natural language. Results are ranked by relevance with full metadata.</p>
+                </div>
+                <div class="feature-card fade-in">
+                    <div class="feature-icon green">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    </div>
+                    <h3>Deep Ingestion</h3>
+                    <p>Download PDFs and convert them to clean Markdown using IBM DocLing. Every figure and table preserved.</p>
+                </div>
+                <div class="feature-card fade-in">
+                    <div class="feature-icon amber">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2a7 7 0 017 7c0 5.25-7 13-7 13S5 14.25 5 9a7 7 0 017-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+                    </div>
+                    <h3>Semantic Memory</h3>
+                    <p>Papers are chunked and embedded locally with sentence-transformers. No API keys, no data leaves your machine.</p>
+                </div>
+                <div class="feature-card fade-in">
+                    <div class="feature-icon rose">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                    </div>
+                    <h3>RAG Q&A</h3>
+                    <p>Ask questions about your ingested library. Answers are grounded in actual paper content with cited sources.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Architecture -->
+    <section id="architecture">
+        <div class="container">
+            <div class="section-label fade-in">Architecture</div>
+            <h2 class="section-title fade-in">How it works</h2>
+            <p class="section-desc fade-in">A clean pipeline from your AI assistant to the scientific literature and back.</p>
+
+            <div class="arch-diagram fade-in">
+                <div class="arch-flow">
+                    <div class="arch-node primary">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                        Claude Desktop / Cursor
+                    </div>
+                    <div class="arch-connector"></div>
+                    <div style="font-size: 0.7rem; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600;">MCP Protocol</div>
+                    <div class="arch-connector"></div>
+                    <div class="arch-node server">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><circle cx="6" cy="6" r="1"/><circle cx="6" cy="18" r="1"/></svg>
+                        ArXiv Intelligence Server
+                    </div>
+                    <div class="arch-connector"></div>
+                    <div class="arch-branch">
+                        <div class="arch-services">
+                            <div class="arch-service">
+                                <span class="arch-service-dot s1"></span>
+                                ArXiv API
+                                <span style="color: var(--text-tertiary); font-size: 0.75rem;">&mdash; search</span>
+                            </div>
+                            <div class="arch-service">
+                                <span class="arch-service-dot s2"></span>
+                                DocLing
+                                <span style="color: var(--text-tertiary); font-size: 0.75rem;">&mdash; PDF to Markdown</span>
+                            </div>
+                            <div class="arch-service">
+                                <span class="arch-service-dot s3"></span>
+                                ChromaDB
+                                <span style="color: var(--text-tertiary); font-size: 0.75rem;">&mdash; vectors</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- MCP Tools -->
+    <section id="tools">
+        <div class="container">
+            <div class="section-label fade-in">MCP Interface</div>
+            <h2 class="section-title fade-in">Tools & Resources</h2>
+            <p class="section-desc fade-in">Four endpoints that give your AI assistant full research capabilities.</p>
+
+            <div class="fade-in">
+                <table class="tools-table">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Name</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="tool-type tool">Tool</span></td>
+                            <td><span class="tool-name">search_arxiv</span></td>
+                            <td><span class="tool-desc">Search ArXiv papers by query, sorted by relevance</span></td>
+                        </tr>
+                        <tr>
+                            <td><span class="tool-type tool">Tool</span></td>
+                            <td><span class="tool-name">ingest_paper</span></td>
+                            <td><span class="tool-desc">Download, process, and embed a paper into local storage</span></td>
+                        </tr>
+                        <tr>
+                            <td><span class="tool-type tool">Tool</span></td>
+                            <td><span class="tool-name">ask_paper</span></td>
+                            <td><span class="tool-desc">RAG query across your ingested paper library</span></td>
+                        </tr>
+                        <tr>
+                            <td><span class="tool-type resource">Resource</span></td>
+                            <td><span class="tool-name">research://library</span></td>
+                            <td><span class="tool-desc">List all papers currently in your library</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- Workflow -->
+    <section>
+        <div class="container">
+            <div class="section-label fade-in">Workflow</div>
+            <h2 class="section-title fade-in">From question to answer</h2>
+            <p class="section-desc fade-in">A natural four-step research workflow, driven entirely by conversation.</p>
+
+            <div class="workflow-steps">
+                <div class="workflow-step fade-in">
+                    <div class="step-number">1</div>
+                    <h4>Discover</h4>
+                    <p>"Find the top 3 papers on vision transformers"</p>
+                </div>
+                <div class="workflow-step fade-in">
+                    <div class="step-number">2</div>
+                    <h4>Ingest</h4>
+                    <p>"Read the second paper and add it to my library"</p>
+                </div>
+                <div class="workflow-step fade-in">
+                    <div class="step-number">3</div>
+                    <h4>Query</h4>
+                    <p>"Explain the architecture described in that paper"</p>
+                </div>
+                <div class="workflow-step fade-in">
+                    <div class="step-number">4</div>
+                    <h4>Synthesize</h4>
+                    <p>"Compare this approach to standard transformers"</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quick Start -->
+    <section id="quickstart">
+        <div class="container">
+            <div class="section-label fade-in">Quick Start</div>
+            <h2 class="section-title fade-in">Up and running in minutes</h2>
+            <p class="section-desc fade-in">Three commands. No API keys. Fully local embeddings.</p>
+
+            <div class="code-block fade-in" style="margin-bottom: 32px;">
+                <div class="code-header">
+                    <div class="code-dots">
+                        <span></span><span></span><span></span>
+                    </div>
+                    <span class="code-lang">bash</span>
+                </div>
+                <pre><code><span class="comment"># Clone and install</span>
+<span class="variable">$</span> git clone https://github.com/rishimule/arxiv-intelligence-mcp.git
+<span class="variable">$</span> <span class="keyword">cd</span> arxiv-intelligence-mcp
+<span class="variable">$</span> uv sync
+
+<span class="comment"># (Optional) Copy environment config</span>
+<span class="variable">$</span> cp .env.example .env
+
+<span class="comment"># Start the MCP server</span>
+<span class="variable">$</span> uv run arxiv-intelligence-mcp</code></pre>
+            </div>
+
+            <div class="code-block fade-in">
+                <div class="code-header">
+                    <div class="code-dots">
+                        <span></span><span></span><span></span>
+                    </div>
+                    <span class="code-lang">claude_desktop_config.json</span>
+                </div>
+                <pre><code>{
+  <span class="string">"mcpServers"</span>: {
+    <span class="string">"arxiv-intelligence"</span>: {
+      <span class="string">"command"</span>: <span class="string">"/path/to/.venv/bin/python"</span>,
+      <span class="string">"args"</span>: [<span class="string">"-m"</span>, <span class="string">"arxiv_mcp.main"</span>],
+      <span class="string">"cwd"</span>: <span class="string">"/path/to/arxiv-intelligence-mcp"</span>,
+      <span class="string">"env"</span>: { <span class="string">"PYTHONPATH"</span>: <span class="string">"src"</span> }
+    }
+  }
+}</code></pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- Tech Stack -->
+    <section id="stack">
+        <div class="container">
+            <div class="section-label fade-in">Built With</div>
+            <h2 class="section-title fade-in">Tech Stack</h2>
+            <p class="section-desc fade-in">Modern Python tooling with local-first architecture.</p>
+
+            <div class="tech-grid">
+                <div class="tech-item fade-in">
+                    <div class="tech-icon" style="background: rgba(99, 102, 241, 0.1); color: var(--accent-light);">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                    </div>
+                    <div>
+                        <div class="tech-name">FastMCP</div>
+                        <div class="tech-role">MCP Framework</div>
+                    </div>
+                </div>
+                <div class="tech-item fade-in">
+                    <div class="tech-icon" style="background: rgba(52, 211, 153, 0.1); color: var(--green);">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    </div>
+                    <div>
+                        <div class="tech-name">DocLing</div>
+                        <div class="tech-role">PDF Conversion (IBM)</div>
+                    </div>
+                </div>
+                <div class="tech-item fade-in">
+                    <div class="tech-icon" style="background: rgba(251, 191, 36, 0.1); color: var(--amber);">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                    </div>
+                    <div>
+                        <div class="tech-name">ChromaDB</div>
+                        <div class="tech-role">Vector Database</div>
+                    </div>
+                </div>
+                <div class="tech-item fade-in">
+                    <div class="tech-icon" style="background: rgba(34, 211, 238, 0.1); color: var(--cyan);">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 000 20 14.5 14.5 0 000-20"/><path d="M2 12h20"/></svg>
+                    </div>
+                    <div>
+                        <div class="tech-name">sentence-transformers</div>
+                        <div class="tech-role">Local Embeddings</div>
+                    </div>
+                </div>
+                <div class="tech-item fade-in">
+                    <div class="tech-icon" style="background: rgba(251, 113, 133, 0.1); color: var(--rose);">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+                    </div>
+                    <div>
+                        <div class="tech-name">arxiv.py</div>
+                        <div class="tech-role">ArXiv API Client</div>
+                    </div>
+                </div>
+                <div class="tech-item fade-in">
+                    <div class="tech-icon" style="background: rgba(99, 102, 241, 0.1); color: var(--accent-light);">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 12h18"/></svg>
+                    </div>
+                    <div>
+                        <div class="tech-name">uv</div>
+                        <div class="tech-role">Package Manager</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-inner">
+                <div class="footer-left">
+                    MIT License &middot; Built by <a href="https://github.com/rishimule" style="color: var(--text-secondary); text-decoration: none;">Rishi Mule</a>
+                </div>
+                <div class="footer-links">
+                    <a href="https://github.com/rishimule/arxiv-intelligence-mcp">GitHub</a>
+                    <a href="https://github.com/rishimule/arxiv-intelligence-mcp/issues">Issues</a>
+                    <a href="https://modelcontextprotocol.io/">MCP Docs</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Navbar scroll effect
+        const nav = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            nav.classList.toggle('scrolled', window.scrollY > 40);
+        });
+
+        // Intersection Observer for fade-in animations
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry, i) => {
+                if (entry.isIntersecting) {
+                    setTimeout(() => {
+                        entry.target.classList.add('visible');
+                    }, i * 80);
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+        document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+        // Copy install command
+        function copyInstall(el) {
+            const code = el.querySelector('code').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                el.style.borderColor = 'rgba(52, 211, 153, 0.3)';
+                const icon = el.querySelector('.copy-icon');
+                icon.style.color = 'var(--green)';
+                setTimeout(() => {
+                    el.style.borderColor = '';
+                    icon.style.color = '';
+                }, 1500);
+            });
+        }
+    </script>
+</body>
+</html>

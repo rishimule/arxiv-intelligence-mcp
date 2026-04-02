@@ -1,55 +1,113 @@
-# ArXiv Intelligence MCP
+<div align="center">
 
-An intelligent research assistant powered by [MCP](https://modelcontextprotocol.io/), ArXiv, DocLing, and ChromaDB. Connect it to Claude Desktop or Cursor and let your AI search, read, and reason over scientific papers.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/badge/ArXiv_Intelligence-MCP_Server-6366f1?style=for-the-badge&labelColor=0a0a0f">
+  <img alt="ArXiv Intelligence MCP" src="https://img.shields.io/badge/ArXiv_Intelligence-MCP_Server-6366f1?style=for-the-badge&labelColor=0a0a0f">
+</picture>
 
-## Features
+<br><br>
 
-- **Smart Search** -- Query ArXiv for papers sorted by relevance
-- **Deep Ingestion** -- Download PDFs and convert them to clean Markdown via IBM DocLing
-- **Semantic Memory** -- Store paper embeddings in a local ChromaDB vector store
-- **RAG Q&A** -- Ask questions about your library and get context-grounded answers
+**Search, read, and reason over scientific papers with AI.**
+
+An intelligent research assistant powered by [Model Context Protocol](https://modelcontextprotocol.io/), ArXiv, DocLing, and ChromaDB.<br>
+Connect it to Claude Desktop or Cursor and start exploring the literature with natural language.
+
+<br>
+
+[![Python](https://img.shields.io/badge/Python-3.11+-3776ab?style=flat-square&logo=python&logoColor=white)](https://python.org)
+[![License](https://img.shields.io/badge/License-MIT-22d3ee?style=flat-square)](LICENSE)
+[![MCP](https://img.shields.io/badge/Protocol-MCP-6366f1?style=flat-square)](https://modelcontextprotocol.io/)
+[![uv](https://img.shields.io/badge/Package_Manager-uv-f7b731?style=flat-square)](https://docs.astral.sh/uv/)
+
+[Website](https://rishimule.github.io/arxiv-intelligence-mcp) &nbsp;&middot;&nbsp; [Quick Start](#-quick-start) &nbsp;&middot;&nbsp; [Usage Guide](USAGE.md) &nbsp;&middot;&nbsp; [Architecture](#-architecture)
+
+</div>
+
+<br>
+
+---
+
+<br>
+
+## Highlights
+
+| | Feature | Description |
+|:---|:---|:---|
+| **Search** | Smart Discovery | Query ArXiv for papers ranked by relevance with full metadata |
+| **Read** | Deep Ingestion | Download PDFs and convert them to clean Markdown via IBM DocLing |
+| **Remember** | Semantic Memory | Chunk and embed papers locally with sentence-transformers &mdash; no API keys needed |
+| **Reason** | RAG Q&A | Ask questions and get context-grounded answers with cited sources |
+
+<br>
 
 ## Architecture
 
 ```
-Claude Desktop / Cursor
-        |
-        v  (MCP protocol)
-ArXiv Intelligence Server
-   |         |          |
-   v         v          v
-ArXiv API   DocLing   ChromaDB
-(search)   (PDF->MD)  (vectors)
+┌─────────────────────────────────┐
+│   Claude Desktop  /  Cursor     │
+└──────────────┬──────────────────┘
+               │  MCP Protocol
+               ▼
+┌─────────────────────────────────┐
+│   ArXiv Intelligence Server     │
+│   (FastMCP)                     │
+└──┬──────────┬───────────────┬───┘
+   │          │               │
+   ▼          ▼               ▼
+┌────────┐ ┌────────────┐ ┌──────────┐
+│ ArXiv  │ │  DocLing   │ │ ChromaDB │
+│  API   │ │ (PDF→MD)   │ │(Vectors) │
+└────────┘ └────────────┘ └──────────┘
 ```
 
-1. **MCP Host** (Claude Desktop / Cursor) communicates with the ArXiv Intelligence Server.
-2. **ArXiv Client** fetches papers from the ArXiv API.
-3. **DocLing Processor** converts PDFs to Markdown.
+1. **MCP Host** (Claude Desktop / Cursor) communicates with the server over the Model Context Protocol.
+2. **ArXiv Client** searches and downloads papers from the ArXiv API.
+3. **DocLing Processor** converts PDFs to structured Markdown.
 4. **Vector Store** (ChromaDB) indexes chunked content with sentence-transformer embeddings.
-5. **RAG Tool** retrieves relevant context for LLM queries.
+5. **RAG Tool** retrieves relevant context to ground LLM responses.
+
+<br>
+
+## MCP Interface
+
+| Type | Name | Description |
+|:---|:---|:---|
+| `Tool` | `search_arxiv` | Search ArXiv papers by query |
+| `Tool` | `ingest_paper` | Download, process, and embed a paper |
+| `Tool` | `ask_paper` | RAG query across ingested papers |
+| `Resource` | `research://library` | List all ingested paper IDs |
+
+<br>
 
 ## Quick Start
 
 ### Prerequisites
 
-- Python 3.11+
-- [uv](https://docs.astral.sh/uv/) (recommended) or pip
+- **Python 3.11+**
+- [**uv**](https://docs.astral.sh/uv/) (recommended) or pip
 
 ### Install
 
 ```bash
-git clone https://github.com/<your-username>/arxiv-intelligence-mcp.git
+git clone https://github.com/rishimule/arxiv-intelligence-mcp.git
 cd arxiv-intelligence-mcp
 uv sync
 ```
 
-### Configure
+### Configure (optional)
 
-Copy the example environment file (optional -- defaults work out of the box):
+Defaults work out of the box. To customize, copy the example env:
 
 ```bash
 cp .env.example .env
 ```
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `PAPERS_DIR` | `data/papers/` | PDF download cache |
+| `VECTOR_DB_DIR` | `data/vector_db/` | ChromaDB persistence directory |
+| `EMBEDDING_MODEL` | `all-MiniLM-L6-v2` | Sentence-transformer model name |
+| `MAX_SEARCH_RESULTS` | `5` | Default search result count |
 
 ### Run
 
@@ -57,7 +115,9 @@ cp .env.example .env
 uv run arxiv-intelligence-mcp
 ```
 
-## Connecting to Claude Desktop
+<br>
+
+## Connect to Claude Desktop
 
 Add the server to your `claude_desktop_config.json`:
 
@@ -68,7 +128,7 @@ Add the server to your `claude_desktop_config.json`:
 {
   "mcpServers": {
     "arxiv-intelligence": {
-      "command": "/absolute/path/to/arxiv-intelligence-mcp/.venv/bin/python",
+      "command": "/absolute/path/to/.venv/bin/python",
       "args": ["-m", "arxiv_mcp.main"],
       "cwd": "/absolute/path/to/arxiv-intelligence-mcp",
       "env": {
@@ -79,53 +139,65 @@ Add the server to your `claude_desktop_config.json`:
 }
 ```
 
-> Replace `/absolute/path/to/...` with the actual path on your machine.
+> Replace `/absolute/path/to/...` with the actual paths on your machine. Then restart Claude Desktop.
 
-Then restart Claude Desktop.
+<br>
 
-## Usage
+## Example Workflow
 
-Once connected, ask Claude to perform research tasks naturally:
+```
+You:    "Find the top 3 papers on vision transformers"
+Claude: → uses search_arxiv → returns ranked results
 
-| Tool | Description | Example |
-| :--- | :--- | :--- |
-| `search_arxiv` | Search ArXiv for papers | *"Find papers on chain-of-thought reasoning"* |
-| `ingest_paper` | Download & memorize a paper | *"Read paper 2201.11903"* |
-| `ask_paper` | Ask questions about saved papers | *"What does the CoT paper say about few-shot prompting?"* |
+You:    "Read the second paper"
+Claude: → uses ingest_paper → downloads, processes, embeds
 
-| Resource | Description | Example |
-| :--- | :--- | :--- |
-| `research://library` | List all ingested papers | *"Show me my paper library"* |
+You:    "Explain the architecture from that paper"
+Claude: → uses ask_paper → retrieves relevant chunks → answers
 
-### Example Workflow
+You:    "Compare this approach to standard transformers"
+Claude: → combines retrieved context with internal knowledge
+```
 
-1. **Discover** -- *"Find the top 3 papers on vision transformers"*
-2. **Ingest** -- *"Read the second paper"*
-3. **Query** -- *"Explain the architecture from that paper"*
-4. **Synthesize** -- *"Compare this approach to standard transformers"*
+See [**USAGE.md**](USAGE.md) for the full user guide, advanced configuration, and troubleshooting.
 
-See [USAGE.md](USAGE.md) for a detailed user guide, configuration options, and troubleshooting.
+<br>
 
 ## Development
 
 ```bash
-# Run tests
+# Run all tests
 uv run pytest
 
-# Run integration tests
+# Unit tests only
+uv run pytest tests/test_basic.py -v
+
+# Integration tests (requires network)
 uv run pytest tests/integration_test.py -v
 ```
+
+<br>
 
 ## Tech Stack
 
 | Component | Technology |
-| :--- | :--- |
+|:---|:---|
 | MCP Framework | [FastMCP](https://github.com/jlowin/fastmcp) |
 | PDF Conversion | [DocLing](https://github.com/DS4SD/docling) (IBM) |
 | Vector Database | [ChromaDB](https://www.trychroma.com/) |
-| Embeddings | [sentence-transformers](https://www.sbert.net/) (local, no API key needed) |
-| ArXiv API | [arxiv.py](https://github.com/lukasschwab/arxiv.py) |
+| Embeddings | [sentence-transformers](https://www.sbert.net/) &mdash; local, no API key |
+| ArXiv Client | [arxiv.py](https://github.com/lukasschwab/arxiv.py) |
+| Package Manager | [uv](https://docs.astral.sh/uv/) |
+| Build System | [hatchling](https://hatch.pypa.io/) |
+
+<br>
 
 ## License
 
 [MIT](LICENSE)
+
+<br>
+
+<div align="center">
+<sub>Built by <a href="https://github.com/rishimule">Rishi Mule</a></sub>
+</div>
